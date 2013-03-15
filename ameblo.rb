@@ -4,52 +4,84 @@ require "kconv"
 require "rubygems"
 require "mechanize"
 require "time"
+require "nokogiri"
 
 STDOUT.sync = true 
 
+
+def contens(page)
+  title = page.at('h3//a').inner_text
+  date = page.at('span.date').inner_text
+  time = Time.parse date
+  date_str = time.year.to_s + "/" + time.month.to_s + "/" + time.day.to_s + " " + time.hour.to_s + ":"+time.min.to_s + "\n"
+  contents = page.at('div.contents').inner_text
+  body = ""
+  body += title
+  body += date_str
+  contents.split.each do | str |
+        if str == '<!--'
+          break
+        end
+      body += str.to_s
+  end
+  p body
+end
+
+
 if ARGV[0]
   ameblo_id =  ARGV[0]
-  #s = File.read("hoge.txt", :encoding => Encoding::UTF_8)
   a = Mechanize.new
   uri = "http://ameblo.jp/#{ameblo_id}/"
+  count = 0
   a.get(uri) do |ameblo_page|
-    entries = ameblo_page.at('div#recent_entries//ul')
-    entries.search('li').each do | li |
-      page = li.at('a')['href']
-    a.get(page) do | page |
-      date = page.at('span.date').inner_text
-    time = Time.parse date
-    date_str = time.year.to_s + "/" + time.month.to_s + "/" + time.day.to_s + " " + time.hour.to_s + ":"+time.min.to_s + "\n" 
-    print( date_str ) #投稿日付
-    contents = page.at('div.contents').inner_text
-    body = ""
-    contents.split.each do | str |
-      if str == '<!--'
-        break
-      end
-      body += str.to_s + '\n'
-    end
-    puts body
-    file_name = "#{ameblo_id}.txt"
-    File.open(file_name, 'a') {|file|
-       file.write(body)
-    }
     
-    puts "----"
-    imgs = page.at('div.contents').search('img').find_all{|e| e['src'] =~ /(?:.*jpg)/i && e['width'] == nil }.map{|e| e['src']}
-    imgs.each do | e |
-      paths = e.split('/')
-    o = "o" + paths.last.split('_').last
-    file = e.to_s.sub(paths.last,o)
-    print( file )
-    a.get(file).save #オリジナル画像保存
-    end
-    end
-    puts "\n----"
+    page_count = 1
+    
+    paging_links = ameblo_page.at('div.topPaging').search('a')
+    last_page_link =  paging_links.find_all{|e| e['class'] == 'lastPage'}.map{|e| e['href'] }
+    last_page_num = last_page_link[0].to_s.split('/').last.split('-')[1].to_s.split('.')[0].to_i
+    
+    i = 0
+    while i < last_page_num
+      uri =  "http://ameblo.jp/#{ameblo_id}/page-" + i.to_s + ".html"
+      sleep(2)
+      a.get(uri) do  |page|
+       contens(page)
+       
+       date = page.at('span.date').inner_text
+       time = Time.parse date
+       date_str = time.year.to_s + "/" + time.month.to_s + "/" + time.day.to_s + " " + time.hour.to_s + ":"+time.min.to_s + "\n" 
+       #print( date_str ) #投稿日付
+	   contents = page.at('div.contents').inner_text
+	   body = ""
+	   body += page.at('h3//a').inner_text
+	   body += date_str
+	   contents.split.each do | str |
+	        if str == '<!--'
+	          break
+	        end
+	        body += str.to_s
+	    end
+	    file_name = "#{ameblo_id}.txt"
+        File.open(file_name, 'a') {|file|
+	       file.write(body)
+	    }
+        imgs = page.at('div.contents').search('img').find_all{|e| e['src'] =~ /(?:.*jpg)/i && e['width'] == nil }.map{|e| e['src']}  
+          f = 0
+          imgs.each do | e |
+            paths = e.split('/')
+	          o = "o" + paths.last.split('_').last
+          file = e.to_s.sub(paths.last,o)
+          #savefile = "/User/miruku/dir/#{ameblo_id}-#{f}.jpg"
+          #p savefile
+          #a.get(file).save_as(savefile) #オリジナル画像保存
+          #a.get(file).save
+          f += 1
+          end
+      end
+      i+=1
     end
   end
-else
-  puts 'none'
 end
 =begin
 =end
