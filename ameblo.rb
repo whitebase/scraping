@@ -6,9 +6,6 @@ require "mechanize"
 require "time"
 require "nokogiri"
 
-STDOUT.sync = true 
-
-
 def contens(page)
   title = page.at('h3//a').inner_text
   date = page.at('span.date').inner_text
@@ -24,7 +21,7 @@ def contens(page)
         end
       body += str.to_s
   end
-  p body
+  return body
 end
 
 
@@ -44,14 +41,13 @@ if ARGV[0]
     i = 0
     while i < last_page_num
       uri =  "http://ameblo.jp/#{ameblo_id}/page-" + i.to_s + ".html"
-      sleep(2)
+      sleep(1)
       a.get(uri) do  |page|
-       contens(page)
-       
+       #contens(page)
        date = page.at('span.date').inner_text
        time = Time.parse date
        date_str = time.year.to_s + "/" + time.month.to_s + "/" + time.day.to_s + " " + time.hour.to_s + ":"+time.min.to_s + "\n" 
-       #print( date_str ) #投稿日付
+=begin
 	   contents = page.at('div.contents').inner_text
 	   body = ""
 	   body += page.at('h3//a').inner_text
@@ -61,25 +57,30 @@ if ARGV[0]
 	          break
 	        end
 	        body += str.to_s
-	    end
-	    file_name = "#{ameblo_id}.txt"
-        File.open(file_name, 'a') {|file|
+	   end
+=end
+		imgs = page.at('div.contents').search('img').find_all{|e| e['src'] =~ /(?:.*jpg)/i && e['width'] == nil }.map{|e| e['src']}  
+		f = 0
+		imgs.each do | e |
+			paths = e.split('/')
+			  o = "o" + paths.last.split('_').last
+			file = e.to_s.sub(paths.last,o)
+			a.get(file).save
+			body += file + ','
+			#savefile = "/User/miruku/dir/#{ameblo_id}-#{f}.jpg"
+			#p savefile
+			#a.get(file).save_as(savefile) #オリジナル画像保存   
+			f += 1
+		end
+	    i+=1
+=begin       
+      file_name = "#{ameblo_id}.txt"
+      File.open(file_name, 'a') {|file|
 	       file.write(body)
 	    }
-        imgs = page.at('div.contents').search('img').find_all{|e| e['src'] =~ /(?:.*jpg)/i && e['width'] == nil }.map{|e| e['src']}  
-          f = 0
-          imgs.each do | e |
-            paths = e.split('/')
-	          o = "o" + paths.last.split('_').last
-          file = e.to_s.sub(paths.last,o)
-          #savefile = "/User/miruku/dir/#{ameblo_id}-#{f}.jpg"
-          #p savefile
-          #a.get(file).save_as(savefile) #オリジナル画像保存
-          #a.get(file).save
-          f += 1
-          end
       end
-      i+=1
+=end
+      
     end
   end
 end
