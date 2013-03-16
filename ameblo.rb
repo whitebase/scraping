@@ -38,7 +38,8 @@ if ARGV[0]
     i = 0
     while i < last_page_num
       uri =  "http://ameblo.jp/#{ameblo_id}/page-" + i.to_s + ".html"
-      sleep(1)
+      sleep(3)
+      begin
       a.get(uri) do  |page|
         #contens(page)
         date = page.at('span.date').inner_text
@@ -53,25 +54,29 @@ if ARGV[0]
           if str == '<!--'
             break
           end
-        body += str.to_s
+          body += str.to_s
         end
         imgs = page.at('div.contents').search('img').find_all{|e| e['src'] =~ /(?:.*jpg)/i && e['width'] == nil }.map{|e| e['src']}  
         f = 0
         imgs.each do | e |
           paths = e.split('/')
-        o = "o" + paths.last.split('_').last
-        file = e.to_s.sub(paths.last,o)
-        a.get(file).save
-        body += file + ','
+          o = "o" + paths.last.split('_').last
+          file = e.to_s.sub(paths.last,o)
+          a.get(file).save
+          body += file + ','
         #savefile = "/User/miruku/dir/#{ameblo_id}-#{f}.jpg"
         #p savefile
         #a.get(file).save_as(savefile) #オリジナル画像保存   
-        f += 1
+          f += 1
         end
         i+=1
-      end
-    end 
-  end #end while     
+      end #end get page  
+      rescue Mechanize::ResponseCodeError => ex
+        p "だめだた\n"
+        #print ex.message, "\n"
+      end #end begin
+    end #while
+  end #end 
   file_name = "#{ameblo_id}.txt"
   File.open(file_name, 'a') {|file|
     file.write(body)
