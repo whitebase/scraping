@@ -64,7 +64,7 @@ if ARGV[0]
           file = e.to_s.sub(paths.last,o)
           a.get(file).save
           body += file + ','
-        #savefile = "/User/miruku/dir/#{ameblo_id}-#{f}.jpg"
+        #savefile = "./#{ameblo_id}/file#{f}.jpg"
         #p savefile
         #a.get(file).save_as(savefile) #オリジナル画像保存   
           f += 1
